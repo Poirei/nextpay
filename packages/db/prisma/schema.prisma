@@ -1,0 +1,65 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                Int                 @id @default(autoincrement())
+  email             String?             @unique
+  name              String?
+  phoneNumber       String              @unique @map("phone_number")
+  password          String
+  Balances          Balances[]
+  OnRampTransaction OnRampTransaction[]
+  sentTransfers     p2pTransfer[]       @relation(name: "FromUserRelation")
+  receivedTransfers p2pTransfer[]       @relation(name: "ToUserRelation")
+
+  @@map("user")
+}
+
+model Balances {
+  id        Int      @default(autoincrement())
+  userId    Int      @map("user_id")
+  amount    Int
+  locked    Int
+  timestamp DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@unique([id, timestamp])
+  @@map("balances")
+}
+
+model OnRampTransaction {
+  id        Int          @id @default(autoincrement())
+  status    OnRampStatus
+  token     String       @unique
+  provider  String
+  amount    Int
+  startTime DateTime     @map("start_time")
+  userId    Int          @map("user_id")
+  user      User         @relation(fields: [userId], references: [id])
+
+  @@map("on_ramp_transaction")
+}
+
+model p2pTransfer {
+  id         Int      @id @default(autoincrement())
+  amount     Int
+  timestamp  DateTime
+  fromUserId Int      @map("from_user_id")
+  fromUser   User     @relation(name: "FromUserRelation", fields: [fromUserId], references: [id])
+  toUserId   Int      @map("to_user_id")
+  toUser     User     @relation(name: "ToUserRelation", fields: [toUserId], references: [id])
+
+  @@map("p2p_transfer")
+}
+
+enum OnRampStatus {
+  SUCCESS
+  PROCESSING
+  FAILURE
+}
